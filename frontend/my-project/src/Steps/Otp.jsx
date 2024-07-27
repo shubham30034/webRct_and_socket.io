@@ -2,9 +2,39 @@ import React, { useState } from 'react'
 import CardLayout from '../shared/CardLayout/CardLayout'
 import Button from '../shared/Button/Button'
 import TextInput from '../shared/input/TextInput'
+import { NextContext } from '../Pages/Login'
+import { useSelector } from 'react-redux'
+import { verifyOtp } from '../http'
+import { useContext } from 'react'
+import { setAuth } from '../utils/slices/userSlice'
+import { useDispatch } from 'react-redux'
+
 const Otp = () => {
 
+  const dispatch = useDispatch()
+  const onNext = useContext(NextContext)
+  const  {phone,hash} =  useSelector((store)=> store.user.otp)
+
+
   const [otp,setOtp] = useState("")
+
+
+  const submit = async()=>{
+    const payload = {
+      phone:phone,
+      hash:hash,
+      otp:otp
+    }
+    try {
+      const {data} = await verifyOtp(payload)
+      dispatch(setAuth(data))
+    } catch (error) {
+        console.log(error);
+        throw error
+    }
+   
+
+  }
 
   return (
      <div className=' flex justify-center'>
@@ -20,7 +50,7 @@ const Otp = () => {
        />
       </div>
       <div>
-       <Button/>
+       <Button onClick={submit}/>
       </div>
         </CardLayout>
     </div>

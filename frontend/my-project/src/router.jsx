@@ -1,77 +1,93 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Navigate, Outlet } from "react-router-dom";
+import { useSelector } from "react-redux";
 import Login from "./Pages/Login";
 import Profile from "./Pages/Profile";
 import Room from "./Pages/Room";
-import Home from "./Pages/Home";
-import { Navigate, Outlet } from "react-router-dom";
+import { useLoadingWithRefresh } from "./hooks/useLoadingWithRefresh";
+import NavBar from "./Pages/NavBar";
 
-
-const accessToken = false; 
-const profileToken = false; 
-
+// This component handles redirection for authenticated users
 const RedirectIfAuthenticated = ({ children }) => {
-  if (accessToken && profileToken) {
-    return <Navigate to="/" replace />;
+  const { isAuth, activated } = useSelector((store) => store.user);
+
+  if (isAuth && activated) {
+    return <Navigate to="/room" replace />;
   }
 
-  if(accessToken && !profileToken){
+  if (isAuth && !activated) {
     return <Navigate to="/profile" replace />;
   }
 
   return children;
 };
 
+// This component protects routes meant only for guests (non-authenticated users)
 const GuestRoute = ({ children }) => {
-  if (!accessToken) {
-    return <Navigate to="/login" replace />;
+  const { isAuth, activated } = useSelector((store) => store.user);
+
+  if (!isAuth) {
+    return <Navigate to="/login" />;
   }
 
-
-  if(accessToken && profileToken){
-    return <Navigate to="/room"/>
+  if (isAuth && activated) {
+    return <Navigate to="/room" />;
   }
 
-  return children ? children : <Outlet />;
+  return children || <Outlet />;
 };
 
-
+// This component ensures only activated and authenticated users can access the Room
 const RoomRoute = () => {
-  if (!accessToken) {
+  const { isAuth, activated } = useSelector((store) => store.user);
+
+  if (!isAuth) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!profileToken) {
+  if (!activated) {
     return <Navigate to="/profile" />;
   }
 
-  return <Room />;
+ 
+  return (
+    <>
+      <NavBar />
+      <Room />
+    </>
+  );
 };
 
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <Home />,
-  },
-  {
-    path: "/login",
-    element: (
-      <RedirectIfAuthenticated>
-        <Login />
-      </RedirectIfAuthenticated>
-    ),
-  },
-  {
-    path: "/profile",
-    element: (
-      <GuestRoute>
-        <Profile />
-      </GuestRoute>
-    ),
-  },
-  {
-    path: "/room",
-    element: <RoomRoute />,
-  },
-]);
+const Routing = () => {
+  const { loading } = useLoadingWithRefresh();
 
-export default router;
+  const router = createBrowserRouter([
+    {
+      path: "/",
+      element: <Navigate to="/login" replace />,
+    },
+    {
+      path: "/login",
+      element: (
+        <RedirectIfAuthenticated>
+          <Login />
+        </RedirectIfAuthenticated>
+      ),
+    },
+    {
+      path: "/profile",
+      element: (
+        <GuestRoute>
+          <Profile />
+        </GuestRoute>
+      ),
+    },
+    {
+      path: "/room",
+      element: <RoomRoute />, // NavBar will only be shown here
+    },
+  ]);
+
+  return loading ? <div>Loading...</div> : <RouterProvider router={router} />;
+};
+
+export default Routing;
